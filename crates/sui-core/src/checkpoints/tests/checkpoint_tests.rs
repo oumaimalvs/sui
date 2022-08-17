@@ -1373,7 +1373,7 @@ fn test_fragment_full_flow() {
     let cps0 = &mut test_objects[0].1;
     let mut all_fragments = Vec::new();
     while let Ok(fragment) = rx.try_recv() {
-        all_fragments.push(fragment.clone());
+        all_fragments.push(VerifiedCheckpointFragment::new_unchecked(fragment.clone()));
         assert!(cps0
             .handle_internal_fragment(
                 seq.clone(),
@@ -1488,7 +1488,7 @@ pub struct TestAuthority {
 pub struct TestSetup {
     pub committee: Committee,
     pub authorities: Vec<TestAuthority>,
-    pub transactions: Vec<sui_types::messages::Transaction>,
+    pub transactions: Vec<sui_types::messages::VerifiedTransaction>,
     pub aggregator: AuthorityAggregator<LocalAuthorityClient>,
 }
 
@@ -1588,6 +1588,7 @@ pub async fn checkpoint_tests_setup(
     let _join = tokio::task::spawn(async move {
         let mut seq = ExecutionIndices::default();
         while let Some(msg) = _rx.recv().await {
+            let msg = msg.verify(&c).unwrap();
             for (authority, cps) in &checkpoint_stores {
                 if notify_noop {
                     if let Err(err) = cps.lock().handle_internal_fragment(

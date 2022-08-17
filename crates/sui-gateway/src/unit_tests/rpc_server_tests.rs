@@ -278,7 +278,7 @@ async fn test_get_fullnode_transaction() -> Result<(), anyhow::Error> {
             let response = client
                 .quorum_driver()
                 .execute_transaction(
-                    tx,
+                    tx.into_inner(),
                     Some(ExecuteTransactionRequestType::WaitForLocalExecution),
                 )
                 .await

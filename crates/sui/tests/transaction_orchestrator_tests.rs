@@ -50,7 +50,7 @@ async fn test_blocking_execution() -> Result<(), anyhow::Error> {
     orchestrator
         .quorum_driver()
         .execute_transaction(QuorumDriverRequest {
-            transaction: txn,
+            transaction: txn.into_inner(),
             request_type: QuorumDriverRequestType::WaitForEffectsCert,
         })
         .await
@@ -64,7 +64,7 @@ async fn test_blocking_execution() -> Result<(), anyhow::Error> {
 
     let res = execute_with_orchestrator(
         &orchestrator,
-        txn,
+        txn.into_inner(),
         ExecuteTransactionRequestType::WaitForLocalExecution,
     )
     .await;
@@ -110,7 +110,7 @@ async fn test_non_blocking_execution() -> Result<(), anyhow::Error> {
 
     execute_with_orchestrator(
         &orchestrator,
-        txn,
+        txn.into_inner(),
         ExecuteTransactionRequestType::ImmediateReturn,
     )
     .await;
@@ -119,7 +119,7 @@ async fn test_non_blocking_execution() -> Result<(), anyhow::Error> {
     let digest2 = *txn.digest();
     execute_with_orchestrator(
         &orchestrator,
-        txn,
+        txn.into_inner(),
         ExecuteTransactionRequestType::WaitForTxCert,
     )
     .await;
@@ -128,7 +128,7 @@ async fn test_non_blocking_execution() -> Result<(), anyhow::Error> {
     let digest3 = *txn.digest();
     execute_with_orchestrator(
         &orchestrator,
-        txn,
+        txn.into_inner(),
         ExecuteTransactionRequestType::WaitForEffectsCert,
     )
     .await;
@@ -177,7 +177,7 @@ async fn test_local_execution_with_missing_parents() -> Result<(), anyhow::Error
     orchestrator
         .quorum_driver()
         .execute_transaction(QuorumDriverRequest {
-            transaction: tx0,
+            transaction: tx0.into_inner(),
             request_type: QuorumDriverRequestType::WaitForTxCert,
         })
         .await
@@ -201,7 +201,7 @@ async fn test_local_execution_with_missing_parents() -> Result<(), anyhow::Error
     let digest1 = *tx1.digest();
     let res = execute_with_orchestrator(
         &orchestrator,
-        tx1,
+        tx1.into_inner(),
         ExecuteTransactionRequestType::WaitForLocalExecution,
     )
     .await;
@@ -225,7 +225,7 @@ async fn test_local_execution_with_missing_parents() -> Result<(), anyhow::Error
     let digest2 = *tx2.digest();
     execute_with_orchestrator(
         &orchestrator,
-        tx2,
+        tx2.into_inner(),
         ExecuteTransactionRequestType::ImmediateReturn,
     )
     .await;

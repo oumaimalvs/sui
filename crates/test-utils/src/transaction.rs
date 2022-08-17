@@ -30,6 +30,7 @@ use sui_types::messages::ExecuteTransactionRequestType;
 use sui_types::messages::{
     BatchInfoRequest, BatchInfoResponseItem, CallArg, ObjectArg, ObjectInfoRequest,
     ObjectInfoResponse, Transaction, TransactionData, TransactionEffects, TransactionInfoResponse,
+    VerifiedTransaction,
 };
 use sui_types::object::{Object, Owner};
 use sui_types::SUI_FRAMEWORK_OBJECT_ID;
@@ -37,7 +38,7 @@ use tokio::time::{sleep, Duration};
 use tracing::debug;
 use tracing::info;
 
-pub fn make_publish_package(gas_object: Object, path: PathBuf) -> Transaction {
+pub fn make_publish_package(gas_object: Object, path: PathBuf) -> VerifiedTransaction {
     let (sender, keypair) = test_account_keys().pop().unwrap();
     create_publish_move_package_transaction(
         gas_object.compute_object_reference(),
@@ -384,7 +385,7 @@ pub async fn delete_devnet_nft(
 
 /// Submit a certificate containing only owned-objects to all authorities.
 pub async fn submit_single_owner_transaction(
-    transaction: Transaction,
+    transaction: VerifiedTransaction,
     configs: &[ValidatorInfo],
 ) -> TransactionEffects {
     let certificate = make_tx_certs_and_signed_effects(vec![transaction])
@@ -408,7 +409,7 @@ pub async fn submit_single_owner_transaction(
 /// at least one consensus node. We use the loop since some consensus protocols (like Tusk)
 /// may drop transactions. The certificate is submitted to every Sui authority.
 pub async fn submit_shared_object_transaction(
-    transaction: Transaction,
+    transaction: VerifiedTransaction,
     configs: &[ValidatorInfo],
 ) -> SuiResult<TransactionEffects> {
     let certificate = make_tx_certs_and_signed_effects(vec![transaction])

@@ -19,7 +19,9 @@ use futures::FutureExt;
 use sui_types::{
     base_types::SuiAddress,
     crypto::AccountKeyPair,
-    messages::{QuorumDriverRequest, QuorumDriverRequestType, QuorumDriverResponse, Transaction},
+    messages::{
+        QuorumDriverRequest, QuorumDriverRequestType, QuorumDriverResponse, VerifiedTransaction,
+    },
 };
 use test_utils::messages::make_transfer_sui_transaction;
 use tracing::error;
@@ -93,14 +95,14 @@ pub async fn get_latest(
 }
 
 pub async fn submit_transaction(
-    transaction: Transaction,
+    transaction: VerifiedTransaction,
     aggregator: Arc<AuthorityAggregator<NetworkAuthorityClient>>,
 ) -> Option<TransactionEffects> {
     let qd = QuorumDriverHandler::new(aggregator.clone(), QuorumDriverMetrics::new_for_tests());
     if let QuorumDriverResponse::EffectsCert(result) = qd
         .clone_quorum_driver()
         .execute_transaction(QuorumDriverRequest {
-            transaction,
+            transaction: transaction.into_inner(),
             request_type: QuorumDriverRequestType::WaitForEffectsCert,
         })
         .await

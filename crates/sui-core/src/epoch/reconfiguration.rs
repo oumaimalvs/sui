@@ -14,7 +14,7 @@ use sui_network::{default_mysten_network_config, tonic};
 use sui_types::base_types::AuthorityName;
 use sui_types::crypto::AuthorityPublicKeyBytes;
 use sui_types::error::SuiResult;
-use sui_types::messages::SignedTransaction;
+use sui_types::messages::VerifiedSignedTransaction;
 use sui_types::sui_system_state::SuiSystemState;
 use tracing::{debug, error, info, warn};
 use typed_store::Map;
@@ -119,7 +119,7 @@ where
         // all active processes, maybe batch service.
         // We should also reduce the amount of committee passed around.
 
-        let advance_epoch_tx = SignedTransaction::new_change_epoch(
+        let advance_epoch_tx = VerifiedSignedTransaction::new_change_epoch(
             next_epoch,
             0, // TODO: fill in storage_charge
             0, // TODO: fill in computation_charge
@@ -144,12 +144,15 @@ where
                 .process_transaction(advance_epoch_tx.clone().to_transaction())
                 .await
             {
-                Ok(certificate) => match self.state.handle_certificate(&certificate).await {
-                    Ok(_) => {
-                        break;
+                Ok(certificate) => {
+                    let certificate = certificate.verify(&self.state.committee.load())?;
+                    match self.state.handle_certificate(&certificate).await {
+                        Ok(_) => {
+                            break;
+                        }
+                        Err(err) => err,
                     }
-                    Err(err) => err,
-                },
+                }
                 Err(err) => err,
             };
             debug!(

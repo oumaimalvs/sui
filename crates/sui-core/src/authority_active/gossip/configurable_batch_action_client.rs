@@ -95,7 +95,10 @@ impl AuthorityAPI for ConfigurableBatchActionClient {
         transaction: Transaction,
     ) -> Result<TransactionInfoResponse, SuiError> {
         let state = self.state.clone();
-        state.handle_transaction(transaction).await
+        state
+            .handle_transaction(transaction)
+            .await
+            .map(|r| r.into())
     }
 
     async fn handle_certificate(
@@ -103,7 +106,10 @@ impl AuthorityAPI for ConfigurableBatchActionClient {
         certificate: CertifiedTransaction,
     ) -> Result<TransactionInfoResponse, SuiError> {
         let state = self.state.clone();
-        state.handle_certificate(&certificate).await
+        state
+            .handle_certificate(&certificate)
+            .await
+            .map(|r| r.into())
     }
 
     async fn handle_account_info_request(
@@ -121,7 +127,10 @@ impl AuthorityAPI for ConfigurableBatchActionClient {
         request: ObjectInfoRequest,
     ) -> Result<ObjectInfoResponse, SuiError> {
         let state = self.state.clone();
-        state.handle_object_info_request(request).await
+        state
+            .handle_object_info_request(request)
+            .await
+            .map(|r| r.into())
     }
 
     /// Handle Object information requests for this account.
@@ -129,7 +138,10 @@ impl AuthorityAPI for ConfigurableBatchActionClient {
         &self,
         request: TransactionInfoRequest,
     ) -> Result<TransactionInfoResponse, SuiError> {
-        self.state.handle_transaction_info_request(request).await
+        self.state
+            .handle_transaction_info_request(request)
+            .await
+            .map(|r| r.into())
     }
 
     /// Handle Batch information requests for this authority.
