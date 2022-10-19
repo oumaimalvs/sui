@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 use super::*;
 use crate::authority::{authority_tests::init_state_with_objects, AuthorityState};
-use crate::consensus_handler::VerifiedSequencedConsensusTransaction;
 use crate::test_utils::to_sender_signed_transaction;
 use move_core_types::{account_address::AccountAddress, ident_str};
 use narwhal_types::Transactions;
@@ -104,9 +103,15 @@ async fn listen_to_sequenced_transaction() {
 
     // Set the shared object locks.
     state
-        .handle_consensus_transaction(VerifiedSequencedConsensusTransaction::new_test(
+        .handle_consensus_transaction(
+            // TODO [2533]: use this once integrating Narwhal reconfiguration
+            &narwhal_consensus::ConsensusOutput {
+                certificate: narwhal_types::Certificate::default(),
+                consensus_index: narwhal_types::SequenceNumber::default(),
+            },
+            Default::default(),
             ConsensusTransaction::new_certificate_message(&state.name, certificate),
-        ))
+        )
         .await
         .unwrap();
 
@@ -178,9 +183,15 @@ async fn submit_transaction_to_consensus() {
 
             // Set the shared object locks.
             state_guard
-                .handle_consensus_transaction(VerifiedSequencedConsensusTransaction::new_test(
+                .handle_consensus_transaction(
+                    // TODO [2533]: use this once integrating Narwhal reconfiguration
+                    &narwhal_consensus::ConsensusOutput {
+                        certificate: narwhal_types::Certificate::default(),
+                        consensus_index: narwhal_types::SequenceNumber::default(),
+                    },
+                    Default::default(),
                     ConsensusTransaction::new_certificate_message(&name, *certificate),
-                ))
+                )
                 .await
                 .unwrap();
 
