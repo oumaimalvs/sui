@@ -7,6 +7,7 @@ use crate::{
     CertificateDigestProto,
 };
 use bytes::Bytes;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use config::{Committee, Epoch, SharedWorkerCache, Stake, WorkerId, WorkerInfo};
 use crypto::{AggregateSignature, PublicKey, Signature};
 use dag::node_dag::Affiliated;
@@ -30,9 +31,44 @@ use std::{
 /// The round number.
 pub type Round = u64;
 
+/// An entity that wants to get timestamp, can/should extend this trait
+/// to uniformly access its timestamp with necessary conversions.
+pub trait Timestamped {
+    /// Returns the entity's timestamp in DateTime.
+    fn timestamp(&self) -> DateTime<Utc>;
+
+    /// Returns the current timestamp in miliseconds for UTC timezone
+    fn utc_now_ms() -> u64 {
+        let ts_ms = Utc::now().timestamp_millis();
+        u64::try_from(ts_ms).expect("Travelling in time machine")
+    }
+
+    fn from_milliseconds(millis: u64) -> DateTime<Utc> {
+        DateTime::from_utc(NaiveDateTime::from_timestamp(millis as i64, 0), Utc)
+    }
+}
+
 pub type Transaction = Vec<u8>;
 #[derive(Clone, Serialize, Deserialize, Default, Debug, PartialEq, Eq, Arbitrary)]
-pub struct Batch(pub Vec<Transaction>);
+pub struct Batch {
+    pub transactions: Vec<Transaction>,
+    pub timestamp_ms: u64,
+}
+
+impl Batch {
+    pub fn new(transactions: Vec<Transaction>) -> Self {
+        Batch {
+            transactions,
+            timestamp_ms: Self::utc_now_ms(),
+        }
+    }
+}
+
+impl Timestamped for Batch {
+    fn timestamp(&self) -> DateTime<Utc> {
+        Self::from_milliseconds(self.timestamp_ms)
+    }
+}
 
 #[derive(
     Clone, Copy, Serialize, Deserialize, Default, PartialEq, Eq, Hash, PartialOrd, Ord, MallocSizeOf,
@@ -67,7 +103,9 @@ impl Hash<{ crypto::DIGEST_LENGTH }> for Batch {
     type TypedDigest = BatchDigest;
 
     fn digest(&self) -> Self::TypedDigest {
-        BatchDigest::new(crypto::DefaultHashFunction::digest_iterator(self.0.iter()).into())
+        BatchDigest::new(
+            crypto::DefaultHashFunction::digest_iterator(self.transactions.iter()).into(),
+        )
     }
 }
 
