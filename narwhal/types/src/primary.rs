@@ -7,7 +7,6 @@ use crate::{
     CertificateDigestProto,
 };
 use bytes::Bytes;
-use chrono::{DateTime, NaiveDateTime, Utc};
 use config::{Committee, Epoch, SharedWorkerCache, Stake, WorkerId, WorkerInfo};
 use crypto::{AggregateSignature, PublicKey, Signature};
 use dag::node_dag::Affiliated;
@@ -23,6 +22,7 @@ use mysten_util_mem::MallocSizeOf;
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
+use std::time::{Duration, SystemTime};
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
     fmt,
@@ -31,20 +31,25 @@ use std::{
 /// The round number.
 pub type Round = u64;
 
-/// An entity that wants to get timestamp, can/should extend this trait
-/// to uniformly access its timestamp with necessary conversions.
-pub trait Timestamped {
-    /// Returns the entity's timestamp in DateTime.
-    fn timestamp(&self) -> DateTime<Utc>;
+/// The epoch UNIX timestamp in milliseconds
+pub type TimestampMs = u64;
 
-    /// Returns the current timestamp in miliseconds for UTC timezone
-    fn utc_now_ms() -> u64 {
-        let ts_ms = Utc::now().timestamp_millis();
-        u64::try_from(ts_ms).expect("Travelling in time machine")
+pub trait Timestamp {
+    fn elapsed(&self) -> Duration;
+}
+
+impl Timestamp for TimestampMs {
+    fn elapsed(&self) -> Duration {
+        let diff = now() - self;
+        Duration::from_millis(diff)
     }
-
-    fn from_milliseconds(millis: u64) -> DateTime<Utc> {
-        DateTime::from_utc(NaiveDateTime::from_timestamp(millis as i64, 0), Utc)
+}
+// Returns the current time expressed as UNIX
+// timestamp in milliseconds
+fn now() -> TimestampMs {
+    match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+        Ok(n) => n.as_millis() as TimestampMs,
+        Err(_) => panic!("SystemTime before UNIX EPOCH!"),
     }
 }
 
@@ -52,21 +57,15 @@ pub type Transaction = Vec<u8>;
 #[derive(Clone, Serialize, Deserialize, Default, Debug, PartialEq, Eq, Arbitrary)]
 pub struct Batch {
     pub transactions: Vec<Transaction>,
-    pub timestamp_ms: u64,
+    pub timestamp: TimestampMs,
 }
 
 impl Batch {
     pub fn new(transactions: Vec<Transaction>) -> Self {
         Batch {
             transactions,
-            timestamp_ms: Self::utc_now_ms(),
+            timestamp: now(),
         }
-    }
-}
-
-impl Timestamped for Batch {
-    fn timestamp(&self) -> DateTime<Utc> {
-        Self::from_milliseconds(self.timestamp_ms)
     }
 }
 
@@ -120,7 +119,7 @@ pub struct Header {
     pub parents: BTreeSet<CertificateDigest>,
     pub id: HeaderDigest,
     pub signature: Signature,
-    pub timestamp_ms: u64,
+    pub timestamp: TimestampMs,
 }
 
 impl HeaderBuilder {
@@ -136,7 +135,7 @@ impl HeaderBuilder {
             parents: self.parents.unwrap(),
             id: HeaderDigest::default(),
             signature: Signature::default(),
-            timestamp_ms: 0,
+            timestamp: 0,
         };
 
         Ok(Header {
@@ -178,7 +177,7 @@ impl Header {
             parents,
             id: HeaderDigest::default(),
             signature: Signature::default(),
-            timestamp_ms: Self::utc_now_ms(),
+            timestamp: now(),
         };
         let id = header.digest();
         let signature = signature_service.request_signature(id.into()).await;
@@ -222,12 +221,6 @@ impl Header {
         self.author
             .verify(id_digest.as_ref(), &self.signature)
             .map_err(DagError::from)
-    }
-}
-
-impl Timestamped for Header {
-    fn timestamp(&self) -> DateTime<Utc> {
-        Self::from_milliseconds(self.timestamp_ms)
     }
 }
 
@@ -435,7 +428,7 @@ pub struct Certificate {
     aggregated_signature: AggregateSignature,
     #[serde_as(as = "NarwhalBitmap")]
     signed_authorities: roaring::RoaringBitmap,
-    timestamp_ms: u64,
+    timestamp: TimestampMs,
 }
 
 impl Certificate {
@@ -530,7 +523,7 @@ impl Certificate {
             header,
             aggregated_signature,
             signed_authorities,
-            timestamp_ms: Self::utc_now_ms(),
+            timestamp: now(),
         })
     }
 
@@ -608,12 +601,6 @@ impl Certificate {
 
     pub fn origin(&self) -> PublicKey {
         self.header.author.clone()
-    }
-}
-
-impl Timestamped for Certificate {
-    fn timestamp(&self) -> DateTime<Utc> {
-        Self::from_milliseconds(self.timestamp_ms)
     }
 }
 
@@ -835,6 +822,8 @@ impl fmt::Display for BlockErrorKind {
 pub struct WorkerOurBatchMessage {
     pub digest: BatchDigest,
     pub worker_id: WorkerId,
+    /// The time when the batch was created
+    pub timestamp: TimestampMs,
 }
 
 /// Used by worker to inform primary it received a batch from another authority.
@@ -856,4 +845,21 @@ pub struct RoundVoteDigestPair {
     pub round: Round,
     /// The hash of the vote used to ensure equality
     pub vote_digest: VoteDigest,
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Batch, Timestamp};
+    use std::time::Duration;
+    use tokio::time::sleep;
+
+    #[tokio::test]
+    async fn test_timestamp() {
+        let batch = Batch::new(vec![]);
+        assert!(batch.timestamp > 0);
+
+        sleep(Duration::from_secs(2)).await;
+
+        assert!(batch.timestamp.elapsed().as_secs_f64() >= 2.0);
+    }
 }

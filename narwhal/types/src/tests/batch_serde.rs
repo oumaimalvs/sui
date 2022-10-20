@@ -12,7 +12,7 @@ fn test_serde_batch() {
 
     let batch: Batch = Batch {
         transactions: (0..2).map(|_| tx()).collect(),
-        timestamp_ms: 1666205365890,
+        timestamp: 1666205365890,
     };
 
     assert_tokens(
@@ -52,7 +52,7 @@ fn test_bincode_serde_batch() {
 
     let txes: Batch = Batch {
         transactions: (0..2).map(|_| tx()).collect(),
-        timestamp_ms: 1666205365890,
+        timestamp: 1666205365890,
     };
 
     let txes_bytes = bincode::serialize(&txes).unwrap();
@@ -82,7 +82,7 @@ fn test_bincode_serde_batch_message() {
     let txes = WorkerBatchMessage {
         batch: Batch {
             transactions: (0..2).map(|_| tx()).collect(),
-            timestamp_ms: 1666205365890,
+            timestamp: 1666205365890,
         },
     };
 
@@ -90,9 +90,10 @@ fn test_bincode_serde_batch_message() {
 
     // We expect this will be the same as the above.
     // Length-prefix 2, length-prefix 5, 11111, length-prefix 5, 11111
-    let expected_bytes =
-        hex::decode("0000000002000000000000000500000000000000010101010105000000000000000101010101823694f183010000")
-            .unwrap();
+    let expected_bytes = hex::decode(
+        "02000000000000000500000000000000010101010105000000000000000101010101823694f183010000",
+    )
+    .unwrap();
 
     assert_eq!(
         txes_bytes.clone(),

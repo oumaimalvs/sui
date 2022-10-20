@@ -54,6 +54,7 @@ async fn handle_clients_transactions() {
     let mut peer_networks = Vec::new();
     let batch = batch();
     let batch_digest = batch.digest();
+    let batch_timestamp_ms = batch.timestamp;
 
     let (tx_await_batch, mut rx_await_batch) = test_utils::test_channel!(CHANNEL_CAPACITY);
     let mut mock_primary_server = MockWorkerToPrimary::new();
@@ -64,6 +65,7 @@ async fn handle_clients_transactions() {
                 == &WorkerOurBatchMessage {
                     digest: batch_digest,
                     worker_id,
+                    timestamp: batch_timestamp_ms,
                 }
         })
         .times(1)

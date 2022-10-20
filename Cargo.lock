@@ -5123,7 +5123,6 @@ dependencies = [
  "base64",
  "bincode",
  "bytes",
- "chrono",
  "criterion",
  "dashmap",
  "derive_builder",
