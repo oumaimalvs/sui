@@ -83,7 +83,7 @@ fn test_bincode_serde_batch_message() {
         batch: Batch {
             transactions: (0..2).map(|_| tx()).collect(),
             timestamp_ms: 1666205365890,
-        }
+        },
     };
 
     let txes_bytes = bincode::serialize(&txes).unwrap();
