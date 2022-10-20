@@ -136,7 +136,7 @@ impl HeaderBuilder {
             parents: self.parents.unwrap(),
             id: HeaderDigest::default(),
             signature: Signature::default(),
-            timestamp_ms: 0
+            timestamp_ms: 0,
         };
 
         Ok(Header {
@@ -178,7 +178,7 @@ impl Header {
             parents,
             id: HeaderDigest::default(),
             signature: Signature::default(),
-            timestamp_ms: Self::utc_now_ms()
+            timestamp_ms: Self::utc_now_ms(),
         };
         let id = header.digest();
         let signature = signature_service.request_signature(id.into()).await;
@@ -435,6 +435,7 @@ pub struct Certificate {
     aggregated_signature: AggregateSignature,
     #[serde_as(as = "NarwhalBitmap")]
     signed_authorities: roaring::RoaringBitmap,
+    timestamp_ms: u64,
 }
 
 impl Certificate {
@@ -529,6 +530,7 @@ impl Certificate {
             header,
             aggregated_signature,
             signed_authorities,
+            timestamp_ms: Self::utc_now_ms(),
         })
     }
 
@@ -606,6 +608,12 @@ impl Certificate {
 
     pub fn origin(&self) -> PublicKey {
         self.header.author.clone()
+    }
+}
+
+impl Timestamped for Certificate {
+    fn timestamp(&self) -> DateTime<Utc> {
+        Self::from_milliseconds(self.timestamp_ms)
     }
 }
 
