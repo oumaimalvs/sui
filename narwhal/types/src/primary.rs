@@ -120,6 +120,7 @@ pub struct Header {
     pub parents: BTreeSet<CertificateDigest>,
     pub id: HeaderDigest,
     pub signature: Signature,
+    pub timestamp_ms: u64,
 }
 
 impl HeaderBuilder {
@@ -135,6 +136,7 @@ impl HeaderBuilder {
             parents: self.parents.unwrap(),
             id: HeaderDigest::default(),
             signature: Signature::default(),
+            timestamp_ms: 0
         };
 
         Ok(Header {
@@ -176,6 +178,7 @@ impl Header {
             parents,
             id: HeaderDigest::default(),
             signature: Signature::default(),
+            timestamp_ms: Self::utc_now_ms()
         };
         let id = header.digest();
         let signature = signature_service.request_signature(id.into()).await;
@@ -219,6 +222,12 @@ impl Header {
         self.author
             .verify(id_digest.as_ref(), &self.signature)
             .map_err(DagError::from)
+    }
+}
+
+impl Timestamped for Header {
+    fn timestamp(&self) -> DateTime<Utc> {
+        Self::from_milliseconds(self.timestamp_ms)
     }
 }
 
